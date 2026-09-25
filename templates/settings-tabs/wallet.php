@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
     <div class="card" style="margin-top:18px;">
         <h2 style="margin-top:0;">حساب مقصد</h2>
         <p class="description">این اطلاعات هم در کیف پول مشتری و هم در EzLens Manager نمایش داده می‌شود.</p>
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:18px;">
             <p><label><strong>نام بانک</strong><br><input class="widefat" name="wallet_bank_name" value="<?php echo esc_attr( $settings['wallet_bank_name'] ?? '' ); ?>" placeholder="مثلاً بانک ملت"></label></p>
             <p><label><strong>صاحب حساب</strong><br><input class="widefat" name="wallet_account_owner" value="<?php echo esc_attr( $settings['wallet_account_owner'] ?? '' ); ?>" placeholder="مثلاً ایزی لنز"></label></p>
             <p><label><strong>عنوان حساب</strong><br><input class="widefat" name="wallet_account_name" value="<?php echo esc_attr( $settings['wallet_account_name'] ?? '' ); ?>" placeholder="حساب جاری / تجاری"></label></p>
