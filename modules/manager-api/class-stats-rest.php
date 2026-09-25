@@ -149,7 +149,7 @@ class EzLens_Manager_Stats_REST {
 		$hpos = false;
 		if ( class_exists( '\\Automattic\\WooCommerce\\Utilities\\OrderUtil' )
 			&& method_exists( '\\Automattic\\WooCommerce\\Utilities\\OrderUtil', 'custom_orders_table_usage_is_enabled' ) ) {
-			$hpos = (bool) \\Automattic\\WooCommerce\\Utilities\\OrderUtil::custom_orders_table_usage_is_enabled();
+			$hpos = (bool) \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
 		}
 
 		if ( $hpos ) {
