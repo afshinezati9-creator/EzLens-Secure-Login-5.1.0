@@ -17,6 +17,7 @@ class EzLens_Manager_Auth_REST {
 	const NS = 'ezlens/v1';
 
 	public static function init() {
+		add_action( 'init', array( __CLASS__, 'early_cors_headers' ), 0 );
 		add_action( 'rest_api_init', array( __CLASS__, 'register_routes' ) );
 		add_action( 'rest_api_init', array( __CLASS__, 'add_cors_headers' ), 5 );
 		add_filter( 'rest_pre_serve_request', array( __CLASS__, 'send_cors_headers' ), 11 );
