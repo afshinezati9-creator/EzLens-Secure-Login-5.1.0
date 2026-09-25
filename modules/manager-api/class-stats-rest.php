@@ -357,7 +357,7 @@ class EzLens_Manager_Stats_REST {
 	}
 
 	public static function top_products( WP_REST_Request $request ) {
-		$by    = sanitize_key( $request->get_param( 'by' ) ?: 'views' ); // views|sales
+		$by    = sanitize_key( $request->get_param( 'by' ) ?: 'views' ); // views|sales|latest
 		$limit = max( 3, min( 20, (int) ( $request->get_param( 'limit' ) ?: 8 ) ) );
 		$cache_key = 'ezlens_mgr_top_products_' . md5( $by . '|' . $limit );
 		$cached = get_transient( $cache_key );
@@ -378,6 +378,21 @@ class EzLens_Manager_Stats_REST {
 					 LEFT JOIN {$wpdb->postmeta} thumb ON thumb.post_id = p.ID AND thumb.meta_key = '_thumbnail_id'
 					 WHERE p.post_type = 'product' AND p.post_status = 'publish'
 					 ORDER BY score DESC
+					 LIMIT %d",
+					$limit
+				)
+			);
+		} elseif ( 'latest' === $by ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT p.ID, p.post_title,
+					       COALESCE(CAST(pm.meta_value AS UNSIGNED),0) AS score,
+					       thumb.meta_value AS thumbnail_id
+					 FROM {$wpdb->posts} p
+					 LEFT JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key = 'post_views_count'
+					 LEFT JOIN {$wpdb->postmeta} thumb ON thumb.post_id = p.ID AND thumb.meta_key = '_thumbnail_id'
+					 WHERE p.post_type = 'product' AND p.post_status = 'publish'
+					 ORDER BY p.post_date DESC, p.ID DESC
 					 LIMIT %d",
 					$limit
 				)
