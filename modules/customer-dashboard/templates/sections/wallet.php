@@ -83,6 +83,7 @@ $topup_amt  = isset( $_GET['amt'] ) ? absint( $_GET['amt'] ) : 0;
 				<p class="ezcd-hint">پس از پرداخت موفق، به همین صفحه برمی‌گردید و موجودی بدون تأیید مدیر شارژ می‌شود. اگر پرداخت ناموفق بود و پول کم شد، تیکت پشتیبانی بزنید.</p>
 				<button type="submit" class="ezcd-btn ezcd-btn-grad" id="ezcd-dep-submit-online">پرداخت از درگاه</button>
 			</div>
+			<?php endif; ?>
 
 			<?php if ( isset( $wallet_methods['bank'] ) ) : ?>
 			<!-- Bank panel -->
@@ -98,6 +99,7 @@ $topup_amt  = isset( $_GET['amt'] ) ? absint( $_GET['amt'] ) : 0;
 				</label>
 				<button type="submit" class="ezcd-btn ezcd-btn-grad" id="ezcd-dep-submit-bank">ثبت درخواست بررسی</button>
 			</div>
+			<?php endif; ?>
 
 			<?php if ( isset( $wallet_methods['card'] ) ) : ?>
 			<!-- Card panel -->
@@ -113,6 +115,7 @@ $topup_amt  = isset( $_GET['amt'] ) ? absint( $_GET['amt'] ) : 0;
 				</label>
 				<button type="submit" class="ezcd-btn ezcd-btn-grad" id="ezcd-dep-submit-card">ارسال فیش و ثبت درخواست</button>
 			</div>
+			<?php endif; ?>
 
 			<p class="ezcd-hint" id="ezcd-dep-msg" aria-live="polite"></p>
 		</form>
