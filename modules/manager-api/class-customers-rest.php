@@ -141,15 +141,24 @@ class EzLens_Manager_Customers_REST {
 		$orderby  = sanitize_key( (string) ( $request->get_param( 'orderby' ) ?: 'registered' ) );
 		$order    = strtoupper( (string) ( $request->get_param( 'order' ) ?: 'DESC' ) ) === 'ASC' ? 'ASC' : 'DESC';
 
+		$allowed_orderby = array( 'registered', 'login', 'nicename', 'email', 'display_name', 'ID' );
+		$is_last_login_sort = ( 'last_login' === $orderby );
+
 		$args = array(
-			'number'  => $per_page,
-			'paged'   => $page,
-			'order'   => $order,
-			'orderby' => in_array( $orderby, array( 'registered', 'login', 'nicename', 'email', 'display_name', 'ID' ), true )
-				? $orderby
-				: 'registered',
+			'number'      => $per_page,
+			'paged'       => $page,
+			'order'       => $order,
+			'orderby'     => $is_last_login_sort ? 'meta_value_num' : (
+				in_array( $orderby, $allowed_orderby, true ) ? $orderby : 'registered'
+			),
 			'count_total' => true,
 		);
+
+		// Keep recent-login sorting server-side so Flutter can request only the
+		// rows that the dashboard actually renders.
+		if ( $is_last_login_sort ) {
+			$args['meta_key'] = 'ezlens_last_login';
+		}
 
 		// Exclude pure administrators from customer list unless role=administrator
 		if ( $role && $role !== 'all' ) {
