@@ -41,7 +41,8 @@ class EzLens_Auth_Ajax_Settings {
             'otp_sms_enabled','campaign_sms_enabled','campaign_email_enabled','campaign_track_enabled',
             'campaign_unsubscribe_enabled','frontend_protection_enabled','frontend_disable_copy',
             'frontend_disable_context','frontend_disable_selection','webhook_enabled','app_otp_enabled',
-            'campaign_schedule_enabled','support_email_notifications','support_notify_admin_email'
+            'campaign_schedule_enabled','support_email_notifications','support_notify_admin_email',
+            'wallet_payment_online_enabled','wallet_payment_card_enabled','wallet_payment_bank_enabled'
         ];
         $sensitive_keys = [
             'sms_api_key','smtp_password','captcha_secret_key','otp_sms_api_key','otp_sms_token',
