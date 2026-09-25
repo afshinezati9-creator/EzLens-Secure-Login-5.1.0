@@ -52,6 +52,9 @@ function ezcd_find_zarinpal_gateway() {
  * @return array|WP_Error { order_id, redirect }
  */
 function ezcd_create_wallet_topup_order( $user_id, $amount ) {
+	if ( class_exists( 'EzLens_Auth_Settings' ) && '1' !== (string) EzLens_Auth_Settings::get( 'wallet_payment_online_enabled' ) ) {
+		return new WP_Error( 'disabled', 'پرداخت آنلاین کیف پول در حال حاضر فعال نیست' );
+	}
 	$user_id = absint( $user_id );
 	$amount  = absint( $amount );
 	if ( $user_id < 1 || $amount < 10000 ) {
