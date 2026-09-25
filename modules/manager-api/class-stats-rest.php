@@ -275,30 +275,27 @@ class EzLens_Manager_Stats_REST {
 		$posts_table = $wpdb->posts;
 		$comments_table = $wpdb->comments;
 
-		$posts_total = (int) $wpdb->get_var(
-			"SELECT COUNT(*)
-			 FROM {$posts_table}
-			 WHERE post_type = 'post' AND post_status = 'publish'"
-		);
-		$pages_total = (int) $wpdb->get_var(
-			"SELECT COUNT(*)
-			 FROM {$posts_table}
-			 WHERE post_type = 'page' AND post_status = 'publish'"
-		);
-
+		// Combine the three post-count aggregates into one indexed scan.
+		// This keeps the dashboard stats endpoint to two content queries:
+		// one for posts/pages and one for approved comments.
 		if ( ! empty( $bounds['start_mysql'] ) ) {
-			$new_posts = (int) $wpdb->get_var(
+			$row = $wpdb->get_row(
 				$wpdb->prepare(
-					"SELECT COUNT(*)
+					"SELECT
+						SUM(CASE WHEN post_type = 'post' AND post_status = 'publish' THEN 1 ELSE 0 END) AS posts_total,
+						SUM(CASE WHEN post_type = 'page' AND post_status = 'publish' THEN 1 ELSE 0 END) AS pages_total,
+						SUM(CASE WHEN post_type = 'post' AND post_status = 'publish'
+							AND post_date >= %s AND post_date <= %s THEN 1 ELSE 0 END) AS posts_new
 					 FROM {$posts_table}
-					 WHERE post_type = 'post'
-					   AND post_status = 'publish'
-					   AND post_date >= %s
-					   AND post_date <= %s",
+					 WHERE (post_type = 'post' AND post_status = 'publish')
+					    OR (post_type = 'page' AND post_status = 'publish')",
 					$bounds['start_mysql'],
 					$bounds['end_mysql']
 				)
 			);
+			$posts_total = (int) ( $row->posts_total ?? 0 );
+			$pages_total = (int) ( $row->pages_total ?? 0 );
+			$new_posts  = (int) ( $row->posts_new ?? 0 );
 
 			$comments = (int) $wpdb->get_var(
 				$wpdb->prepare(
@@ -312,7 +309,18 @@ class EzLens_Manager_Stats_REST {
 				)
 			);
 		} else {
+			$row = $wpdb->get_row(
+				"SELECT
+					SUM(CASE WHEN post_type = 'post' AND post_status = 'publish' THEN 1 ELSE 0 END) AS posts_total,
+					SUM(CASE WHEN post_type = 'page' AND post_status = 'publish' THEN 1 ELSE 0 END) AS pages_total
+				 FROM {$posts_table}
+				 WHERE (post_type = 'post' AND post_status = 'publish')
+				    OR (post_type = 'page' AND post_status = 'publish')"
+			);
+			$posts_total = (int) ( $row->posts_total ?? 0 );
+			$pages_total = (int) ( $row->pages_total ?? 0 );
 			$new_posts = $posts_total;
+
 			$comments = (int) $wpdb->get_var(
 				"SELECT COUNT(*)
 				 FROM {$comments_table}
