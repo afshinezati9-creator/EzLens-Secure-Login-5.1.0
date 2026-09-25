@@ -149,6 +149,18 @@ class EzLens_Auth_Settings {
             'product_options_show_price_in_cart'=> '1',
             'product_options_default_layout'    => '1',
             'product_options_required_fields'   => '1',
+
+            // ===== کیف پول: روش‌های شارژ و اطلاعات حساب =====
+            'wallet_payment_online_enabled' => '1',
+            'wallet_payment_card_enabled' => '1',
+            'wallet_payment_bank_enabled' => '1',
+            'wallet_bank_name' => '',
+            'wallet_account_owner' => '',
+            'wallet_account_name' => '',
+            'wallet_card_number' => '',
+            'wallet_account_number' => '',
+            'wallet_iban' => '',
+            'wallet_account_note' => '',
         ];
     }
 
