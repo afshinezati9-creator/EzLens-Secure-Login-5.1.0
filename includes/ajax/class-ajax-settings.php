@@ -164,6 +164,9 @@ class EzLens_Auth_Ajax_Settings {
             case 'integration':
                 include EZLAUTH_PLUGIN_DIR . 'templates/settings-tabs/integration.php';
                 break;
+            case 'wallet':
+                include EZLAUTH_PLUGIN_DIR . 'templates/settings-tabs/wallet.php';
+                break;
             default:
                 echo '<p>بخش مورد نظر یافت نشد.</p>';
         }
