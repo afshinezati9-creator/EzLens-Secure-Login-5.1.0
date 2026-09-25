@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class EzLens_Purchase_Process_Install {
 
-	const DB_VERSION        = '1.5';
+	const DB_VERSION        = '1.6';
 	const DB_VERSION_OPTION = 'ezlens_purchase_process_db_version';
 
 	public static function get_table_name() {
@@ -65,6 +65,7 @@ class EzLens_Purchase_Process_Install {
 		}
 
 		$storage_ready = self::create_storage_folder();
+		self::maybe_seed_article_comments_script();
 		if ( ! $storage_ready ) {
 			$running = false;
 			return false;
@@ -312,6 +313,50 @@ class EzLens_Purchase_Process_Install {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Seed the modern article-comments file into the managed Purchase Process
+	 * list once. The physical file is shipped with the plugin in storage/.
+	 */
+	private static function maybe_seed_article_comments_script() {
+		global $wpdb;
+		$table = self::get_table_name();
+		if ( ! self::table_exists() ) {
+			return false;
+		}
+
+		$filename = 'ezlens-article-comments.php';
+		$exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM `{$table}` WHERE filename = %s LIMIT 1",
+				$filename
+			)
+		);
+		if ( $exists ) {
+			return true;
+		}
+
+		$file = trailingslashit( self::get_storage_dir() ) . $filename;
+		if ( ! is_readable( $file ) ) {
+			return false;
+		}
+
+		$now = current_time( 'mysql' );
+		$inserted = $wpdb->insert(
+			$table,
+			array(
+				'title'       => 'نظرات مقالات — طراحی مینیمال',
+				'filename'    => $filename,
+				'description' => 'استایل و فرم مدرن نظرات مقالات؛ فقط روی صفحات مقاله اجرا می‌شود.',
+				'status'      => 1,
+				'created_at'  => $now,
+				'updated_at'  => $now,
+			),
+			array( '%s', '%s', '%s', '%d', '%s', '%s' )
+		);
+
+		return false !== $inserted;
 	}
 
 	public static function is_ready() {
