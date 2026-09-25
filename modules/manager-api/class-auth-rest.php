@@ -28,10 +28,14 @@ class EzLens_Manager_Auth_REST {
 	}
 
 	public static function send_cors_headers( $value ) {
-		$origin  = isset( $_SERVER['HTTP_ORIGIN'] ) ? (string) $_SERVER['HTTP_ORIGIN'] : '';
+		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? trim( (string) $_SERVER['HTTP_ORIGIN'] ) : '';
+
+		// Flutter Web sends Authorization/X-EzLens-Token headers. Do not use
+		// wildcard CORS for credentialed requests; allow only local development
+		// origins and the site's own origin.
 		$allowed = false;
 		if ( $origin !== '' ) {
-			if ( preg_match( '#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#', $origin ) ) {
+			if ( preg_match( '#^https?://(localhost|127\\.0\\.1)(:\\d+)?$#', $origin ) ) {
 				$allowed = true;
 			}
 			$host = wp_parse_url( home_url(), PHP_URL_HOST );
@@ -40,14 +44,19 @@ class EzLens_Manager_Auth_REST {
 				$allowed = true;
 			}
 		}
+
 		if ( $allowed ) {
 			header( 'Access-Control-Allow-Origin: ' . $origin );
 			header( 'Access-Control-Allow-Credentials: true' );
-		} else {
-			header( 'Access-Control-Allow-Origin: *' );
+		} elseif ( $origin !== '' ) {
+			// Let the browser block untrusted origins instead of returning "*"
+			// together with credential-related headers.
+			return $value;
 		}
+
 		header( 'Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS' );
-		header( 'Access-Control-Allow-Headers: Authorization, X-EzLens-Token, Content-Type, X-WP-Nonce, X-Requested-With, Accept' );
+		header( 'Access-Control-Allow-Headers: Authorization, X-EzLens-Token, Content-Type, X-WP-Nonce, X-Requested-With, Accept, Origin' );
+		header( 'Access-Control-Max-Age: 600' );
 		header( 'Access-Control-Expose-Headers: X-WP-Total, X-WP-TotalPages, Link' );
 		header( 'Vary: Origin' );
 		return $value;
