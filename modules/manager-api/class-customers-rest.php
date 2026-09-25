@@ -89,14 +89,18 @@ class EzLens_Manager_Customers_REST {
 		return absint( $v );
 	}
 
-	private static function map_user( $user ) {
+	private static function map_user( $user, $include_stats = true ) {
 		$user_id = (int) $user->ID;
 		$has_password = ! empty( $user->user_pass );
 		if ( get_user_meta( $user_id, 'ezlens_otp_only', true ) === '1' ) {
 			$has_password = false;
 		}
-		$orders_count = function_exists( 'wc_get_customer_order_count' ) ? (int) wc_get_customer_order_count( $user_id ) : 0;
-		$total_spent  = function_exists( 'wc_get_customer_total_spent' ) ? (string) wc_get_customer_total_spent( $user_id ) : '0';
+		$orders_count = 0;
+		$total_spent  = '0';
+		if ( $include_stats ) {
+			$orders_count = function_exists( 'wc_get_customer_order_count' ) ? (int) wc_get_customer_order_count( $user_id ) : 0;
+			$total_spent  = function_exists( 'wc_get_customer_total_spent' ) ? (string) wc_get_customer_total_spent( $user_id ) : '0';
+		}
 
 		return array(
 			'id'             => $user_id,
@@ -131,6 +135,8 @@ class EzLens_Manager_Customers_REST {
 		$page     = max( 1, (int) ( $request->get_param( 'page' ) ?: 1 ) );
 		$per_page = max( 1, min( 100, (int) ( $request->get_param( 'per_page' ) ?: 15 ) ) );
 		$search   = sanitize_text_field( (string) $request->get_param( 'search' ) );
+		$summary  = (bool) $request->get_param( 'summary' );
+		$include_stats = ! $summary;
 		$role     = sanitize_key( (string) ( $request->get_param( 'role' ) ?: 'all' ) );
 		$orderby  = sanitize_key( (string) ( $request->get_param( 'orderby' ) ?: 'registered' ) );
 		$order    = strtoupper( (string) ( $request->get_param( 'order' ) ?: 'DESC' ) ) === 'ASC' ? 'ASC' : 'DESC';
@@ -163,7 +169,7 @@ class EzLens_Manager_Customers_REST {
 		$total = (int) $q->get_total();
 		$items = array();
 		foreach ( (array) $users as $u ) {
-			$items[] = self::map_user( $u );
+			$items[] = self::map_user( $u, $include_stats );
 		}
 
 		// If role filter empty result but search looks like phone, try meta
@@ -184,7 +190,7 @@ class EzLens_Manager_Customers_REST {
 				)
 			);
 			foreach ( (array) $q2->get_results() as $u ) {
-				$items[] = self::map_user( $u );
+				$items[] = self::map_user( $u, $include_stats );
 			}
 			$total = max( $total, (int) $q2->get_total() );
 		}
