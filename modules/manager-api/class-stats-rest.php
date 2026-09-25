@@ -215,39 +215,50 @@ class EzLens_Manager_Stats_REST {
 	}
 
 	private static function user_stats( $bounds ) {
-		$q = new WP_User_Query(
-			array(
-				'role__in' => array( 'customer', 'subscriber' ),
-				'fields'   => 'ID',
-				'number'   => 1,
-				'count_total' => true,
+		global $wpdb;
+
+		// Avoid WP_User_Query/count_users() here: both can build sizeable role
+		// queries and user objects/meta structures for a dashboard aggregate.
+		// The Manager only needs scalar counts, so use direct COUNT queries.
+		$users_table = $wpdb->users;
+		$meta_table  = $wpdb->usermeta;
+		$cap_key     = $wpdb->prefix . 'capabilities';
+
+		$user_count = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$users_table}"
+		);
+
+		$customer_sql = "SELECT COUNT(DISTINCT u.ID)
+			FROM {$users_table} u
+			INNER JOIN {$meta_table} um
+				ON um.user_id = u.ID
+				AND um.meta_key = %s
+			WHERE um.meta_value LIKE %s
+			   OR um.meta_value LIKE %s";
+
+		$total_customers = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				$customer_sql,
+				$cap_key,
+				'%"customer"%',
+				'%"subscriber"%'
 			)
 		);
-		$total_customers = (int) $q->get_total();
 
-		$new = 0;
 		if ( ! empty( $bounds['start_mysql'] ) ) {
-			$nq = new WP_User_Query(
-				array(
-					'role__in'    => array( 'customer', 'subscriber' ),
-					'date_query'  => array(
-						array(
-							'after'     => $bounds['start_mysql'],
-							'before'    => $bounds['end_mysql'],
-							'inclusive' => true,
-						),
-					),
-					'fields'      => 'ID',
-					'number'      => 1,
-					'count_total' => true,
+			$new = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					$customer_sql . ' AND u.user_registered >= %s AND u.user_registered <= %s',
+					$cap_key,
+					'%"customer"%',
+					'%"subscriber"%',
+					$bounds['start_mysql'],
+					$bounds['end_mysql']
 				)
 			);
-			$new = (int) $nq->get_total();
 		} else {
 			$new = $total_customers;
 		}
-
-		$user_count = (int) count_users()['total_users'];
 
 		return array(
 			'total_users'     => $user_count,
@@ -257,48 +268,56 @@ class EzLens_Manager_Stats_REST {
 	}
 
 	private static function content_stats( $bounds ) {
-		$posts_total = (int) wp_count_posts( 'post' )->publish;
-		$pages_total = (int) wp_count_posts( 'page' )->publish;
+		global $wpdb;
 
-		$new_posts = 0;
+		// This endpoint only needs counts. Avoid WP_Query/get_comments() object
+		// construction and let MySQL aggregate directly over indexed columns.
+		$posts_table = $wpdb->posts;
+		$comments_table = $wpdb->comments;
+
+		$posts_total = (int) $wpdb->get_var(
+			"SELECT COUNT(*)
+			 FROM {$posts_table}
+			 WHERE post_type = 'post' AND post_status = 'publish'"
+		);
+		$pages_total = (int) $wpdb->get_var(
+			"SELECT COUNT(*)
+			 FROM {$posts_table}
+			 WHERE post_type = 'page' AND post_status = 'publish'"
+		);
+
 		if ( ! empty( $bounds['start_mysql'] ) ) {
-			$q = new WP_Query(
-				array(
-					'post_type'      => 'post',
-					'post_status'    => 'publish',
-					'posts_per_page' => 1,
-					'fields'         => 'ids',
-					'date_query'     => array(
-						array(
-							'after'     => $bounds['start_mysql'],
-							'before'    => $bounds['end_mysql'],
-							'inclusive' => true,
-						),
-					),
+			$new_posts = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*)
+					 FROM {$posts_table}
+					 WHERE post_type = 'post'
+					   AND post_status = 'publish'
+					   AND post_date >= %s
+					   AND post_date <= %s",
+					$bounds['start_mysql'],
+					$bounds['end_mysql']
 				)
 			);
-			$new_posts = (int) $q->found_posts;
+
+			$comments = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*)
+					 FROM {$comments_table}
+					 WHERE comment_approved = '1'
+					   AND comment_date >= %s
+					   AND comment_date <= %s",
+					$bounds['start_mysql'],
+					$bounds['end_mysql']
+				)
+			);
 		} else {
 			$new_posts = $posts_total;
-		}
-
-		$comments = 0;
-		if ( ! empty( $bounds['start_mysql'] ) ) {
-			$comments = (int) get_comments(
-				array(
-					'count' => true,
-					'status'=> 'approve',
-					'date_query' => array(
-						array(
-							'after'     => $bounds['start_mysql'],
-							'before'    => $bounds['end_mysql'],
-							'inclusive' => true,
-						),
-					),
-				)
+			$comments = (int) $wpdb->get_var(
+				"SELECT COUNT(*)
+				 FROM {$comments_table}
+				 WHERE comment_approved = '1'"
 			);
-		} else {
-			$comments = (int) wp_count_comments()->approved;
 		}
 
 		return array(
