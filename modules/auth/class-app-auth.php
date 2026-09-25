@@ -14,8 +14,24 @@ class EzLens_Auth_App_Auth {
         global $wpdb;
         $this->table = $wpdb->prefix . 'ezlens_app_tokens';
         add_action('init', [$this, 'create_table']);
+        // Allow WordPress REST permission callbacks to see the app user.
+        add_filter('determine_current_user', [$this, 'determine_current_user'], 20);
     }
     
+
+    /** Resolve Bearer app tokens into the current WordPress user. */
+    public function determine_current_user($user_id){
+        if ((int)$user_id > 0) return $user_id;
+        $header = isset($_SERVER['HTTP_AUTHORIZATION']) ? (string) $_SERVER['HTTP_AUTHORIZATION'] : '';
+        if ($header === '' && function_exists('getallheaders')) {
+            $headers = getallheaders();
+            $header = isset($headers['Authorization']) ? (string) $headers['Authorization'] : '';
+        }
+        if (!preg_match('/^Bearer\\s+(.+)$/i', trim($header), $m)) return $user_id;
+        $token = trim($m[1]);
+        return $token !== '' ? $this->authenticate($token) : $user_id;
+    }
+
     public function create_table(){
         // اگر قبلاً ایجاد شده، دیگر کاری نکن
         if (get_option($this->option_name, false)) {
