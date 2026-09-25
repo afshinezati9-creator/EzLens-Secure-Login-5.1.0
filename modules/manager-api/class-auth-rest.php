@@ -17,9 +17,40 @@ class EzLens_Manager_Auth_REST {
 	const NS = 'ezlens/v1';
 
 	public static function init() {
+		add_action( 'init', array( __CLASS__, 'early_cors_headers' ), 0 );
 		add_action( 'rest_api_init', array( __CLASS__, 'register_routes' ) );
 		add_action( 'rest_api_init', array( __CLASS__, 'add_cors_headers' ), 5 );
 		add_filter( 'rest_pre_serve_request', array( __CLASS__, 'send_cors_headers' ), 11 );
+	}
+
+	public static function early_cors_headers() {
+		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? trim( (string) $_SERVER['HTTP_ORIGIN'] ) : '';
+		if ( $origin === '' ) {
+			return;
+		}
+
+		$allowed = false;
+		if ( preg_match( '#^https?://(localhost|127\\.0\\.1)(:\\d+)?$#', $origin ) ) {
+			$allowed = true;
+		}
+
+		$site_host   = wp_parse_url( home_url(), PHP_URL_HOST );
+		$origin_host = wp_parse_url( $origin, PHP_URL_HOST );
+		if ( $site_host && $origin_host && strcasecmp( (string) $site_host, (string) $origin_host ) === 0 ) {
+			$allowed = true;
+		}
+
+		if ( ! $allowed ) {
+			return;
+		}
+
+		header( 'Access-Control-Allow-Origin: ' . $origin );
+		header( 'Access-Control-Allow-Credentials: true' );
+		header( 'Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS' );
+		header( 'Access-Control-Allow-Headers: Authorization, X-EzLens-Token, Content-Type, X-WP-Nonce, X-Requested-With, Accept, Origin' );
+		header( 'Access-Control-Max-Age: 600' );
+		header( 'Access-Control-Expose-Headers: X-WP-Total, X-WP-TotalPages, Link' );
+		header( 'Vary: Origin' );
 	}
 
 	public static function add_cors_headers() {
@@ -455,7 +486,7 @@ class EzLens_Manager_Auth_REST {
 		if ( class_exists( 'EzLens_Auth_Helper' ) && method_exists( 'EzLens_Auth_Helper', 'normalize_mobile' ) ) {
 			return EzLens_Auth_Helper::normalize_mobile( $raw );
 		}
-		$m = preg_replace( '/[^d+]/', '', (string) $raw );
+		$m = preg_replace( '/[^\d+]/', '', (string) $raw );
 		if ( strpos( $m, '+98' ) === 0 ) {
 			$m = '0' . substr( $m, 3 );
 		}
