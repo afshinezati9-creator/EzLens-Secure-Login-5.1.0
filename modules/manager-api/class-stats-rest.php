@@ -140,52 +140,69 @@ class EzLens_Manager_Stats_REST {
 	}
 
 	private static function order_stats( $bounds ) {
-		if ( ! function_exists( 'wc_get_orders' ) ) {
-			return array(
-				'count'   => 0,
-				'revenue' => 0,
-				'avg'     => 0,
-				'by_status' => array(),
-			);
+		global $wpdb;
+
+		// Avoid loading every WC_Order object just to calculate count, revenue,
+		// and status totals. On stores with many orders this is one of the most
+		// expensive dashboard operations. Aggregate directly in the order tables
+		// and support both HPOS and the legacy posts storage.
+		$hpos = false;
+		if ( class_exists( '\\Automattic\\WooCommerce\\Utilities\\OrderUtil' )
+			&& method_exists( '\\Automattic\\WooCommerce\\Utilities\\OrderUtil', 'custom_orders_table_usage_is_enabled' ) ) {
+			$hpos = (bool) \\Automattic\\WooCommerce\\Utilities\\OrderUtil::custom_orders_table_usage_is_enabled();
 		}
 
-		$statuses = array_keys( wc_get_order_statuses() );
-		$args     = array(
-			'limit'  => -1,
-			'return' => 'ids',
-			'status' => $statuses,
-		);
-		if ( ! empty( $bounds['start_mysql'] ) ) {
-			$args['date_created'] = $bounds['start_mysql'] . '...' . $bounds['end_mysql'];
+		if ( $hpos ) {
+			$table = $wpdb->prefix . 'wc_orders';
+			$where = array( "type = 'shop_order'" );
+			$args  = array();
+			if ( ! empty( $bounds['start_mysql'] ) ) {
+				$where[] = 'date_created_gmt >= %s';
+				$where[] = 'date_created_gmt <= %s';
+				$args[]  = gmdate( 'Y-m-d H:i:s', strtotime( $bounds['start_mysql'] ) );
+				$args[]  = gmdate( 'Y-m-d H:i:s', strtotime( $bounds['end_mysql'] ) );
+			}
+			$sql = "SELECT status, COUNT(*) AS order_count,
+					COALESCE(SUM(CASE WHEN status IN ('wc-completed','wc-processing','wc-on-hold') THEN total_amount ELSE 0 END),0) AS revenue
+				FROM {$table} WHERE " . implode( ' AND ', $where ) . ' GROUP BY status';
+			$rows = $args ? $wpdb->get_results( $wpdb->prepare( $sql, $args ) ) : $wpdb->get_results( $sql );
+		} else {
+			$posts = $wpdb->posts;
+			$meta  = $wpdb->postmeta;
+			$where = array( "p.post_type = 'shop_order'" );
+			$args  = array();
+			if ( ! empty( $bounds['start_mysql'] ) ) {
+				$where[] = 'p.post_date_gmt >= %s';
+				$where[] = 'p.post_date_gmt <= %s';
+				$args[]  = gmdate( 'Y-m-d H:i:s', strtotime( $bounds['start_mysql'] ) );
+				$args[]  = gmdate( 'Y-m-d H:i:s', strtotime( $bounds['end_mysql'] ) );
+			}
+			$sql = "SELECT p.post_status AS status, COUNT(*) AS order_count,
+					COALESCE(SUM(CASE WHEN p.post_status IN ('wc-completed','wc-processing','wc-on-hold') THEN CAST(pm.meta_value AS DECIMAL(20,6)) ELSE 0 END),0) AS revenue
+				FROM {$posts} p
+				LEFT JOIN {$meta} pm ON pm.post_id = p.ID AND pm.meta_key = '_order_total'
+				WHERE " . implode( ' AND ', $where ) . ' GROUP BY p.post_status';
+			$rows = $args ? $wpdb->get_results( $wpdb->prepare( $sql, $args ) ) : $wpdb->get_results( $sql );
 		}
 
-		$orders = wc_get_orders( array_merge( $args, array( 'return' => 'objects' ) ) );
-		$count = count( $orders );
-		$revenue = 0.0;
+		$count     = 0;
+		$revenue   = 0.0;
 		$by_status = array();
-
-		foreach ( $orders as $order ) {
-			if ( ! $order ) {
-				continue;
-			}
-			$st = $order->get_status();
-			if ( ! isset( $by_status[ $st ] ) ) {
-				$by_status[ $st ] = 0;
-			}
-			$by_status[ $st ]++;
-
-			// Count paid-like statuses toward revenue
-			if ( in_array( $st, array( 'completed', 'processing', 'on-hold' ), true ) ) {
-				$revenue += (float) $order->get_total();
-			}
+		foreach ( (array) $rows as $row ) {
+			$status = (string) $row->status;
+			$status = preg_replace( '/^wc-/', '', $status );
+			$n = (int) $row->order_count;
+			$count += $n;
+			$revenue += (float) $row->revenue;
+			$by_status[ $status ] = $n;
 		}
 
 		$status_items = array();
-		foreach ( $by_status as $st => $n ) {
+		foreach ( $by_status as $status => $n ) {
 			$status_items[] = array(
-				'status' => $st,
-				'label'  => wc_get_order_status_name( $st ),
-				'count'  => (int) $n,
+				'status' => $status,
+				'label'  => function_exists( 'wc_get_order_status_name' ) ? wc_get_order_status_name( $status ) : $status,
+				'count'  => $n,
 			);
 		}
 
