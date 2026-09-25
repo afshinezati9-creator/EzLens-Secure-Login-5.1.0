@@ -292,12 +292,12 @@ class EzLens_Manager_Auth_REST {
 			return new WP_Error( 'ezlens_no_admin', 'حساب مدیر اصلی یافت نشد', array( 'status' => 500 ) );
 		}
 
-		$app_pass = self::issue_app_password( $user->ID );
-		if ( is_wp_error( $app_pass ) ) {
-			return $app_pass;
+		$token = self::issue_manager_token( $user->ID, $request );
+		if ( is_wp_error( $token ) ) {
+			return $token;
 		}
 
-		return rest_ensure_response( self::success_payload( $user, $app_pass ) );
+		return rest_ensure_response( self::success_payload( $user, $token ) );
 	}
 
 	/**
@@ -425,14 +425,14 @@ class EzLens_Manager_Auth_REST {
 	 * @param string  $app_pass App password.
 	 * @return array
 	 */
-	private static function success_payload( $user, $app_pass ) {
+	private static function success_payload( $user, $token ) {
 		return array(
 			'success'              => true,
 			'username'             => $user->user_login,
 			'user_email'           => $user->user_email,
 			'display_name'         => $user->display_name,
 			'user_id'              => (int) $user->ID,
-			'token'                => $app_pass,
+			'token'                => $token,
 			'expires_in'          => max( 1, min( 365, (int) EzLens_Auth_Settings::get( 'app_token_days' ) ?: 30 ) ) * DAY_IN_SECONDS,
 			'message'              => 'ورود موفقیت‌آمیز',
 		);
