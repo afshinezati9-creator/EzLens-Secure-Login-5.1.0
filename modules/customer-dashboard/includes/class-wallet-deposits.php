@@ -112,8 +112,9 @@ class EzLens_CD_Wallet_Deposits {
 			return new WP_Error( 'amount', 'حداقل مبلغ شارژ ۱۰٬۰۰۰ تومان است' );
 		}
 		$method = isset( $data['method'] ) ? sanitize_key( $data['method'] ) : 'card';
-		if ( ! array_key_exists( $method, self::methods() ) ) {
-			$method = 'card';
+		$methods = self::methods();
+		if ( ! array_key_exists( $method, $methods ) ) {
+			return new WP_Error( 'method_disabled', 'این روش شارژ کیف پول در حال حاضر فعال نیست' );
 		}
 		$ref = isset( $data['ref_code'] ) ? sanitize_text_field( $data['ref_code'] ) : '';
 		$receipt_id = isset( $data['receipt_id'] ) ? absint( $data['receipt_id'] ) : 0;
