@@ -21,6 +21,7 @@ $icon_tracking = file_get_contents(EZLAUTH_PLUGIN_DIR . 'assets/icons/map-pin-sv
 $icon_pages = file_get_contents(EZLAUTH_PLUGIN_DIR . 'assets/icons/package-box-ui-2-svgrepo-com.svg');
 $icon_integration = file_get_contents(EZLAUTH_PLUGIN_DIR . 'assets/icons/server.svg');
 $icon_login_methods = file_get_contents(EZLAUTH_PLUGIN_DIR . 'assets/icons/user-plus-svgrepo-com.svg');
+$icon_wallet = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H5a3 3 0 0 1 0-6h13v4H6a1 1 0 0 0 0 2h14v13a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V5"/><path d="M16 13h4"/></svg>';
 $icon_save = file_get_contents(EZLAUTH_PLUGIN_DIR . 'assets/icons/download-svgrepo-com.svg');
 $icon_reset = file_get_contents(EZLAUTH_PLUGIN_DIR . 'assets/icons/refresh-cw-svgrepo-com.svg');
 
@@ -108,6 +109,10 @@ if (!$icon_reset) $icon_reset = '<svg width="18" height="18" viewBox="0 0 24 24"
         <button class="settings-tab <?php echo $active_tab === 'integration' ? 'active' : ''; ?>" data-tab="integration">
             <?php echo $icon_integration; ?>
             اتصال و API
+        </button>
+        <button class="settings-tab <?php echo $active_tab === 'wallet' ? 'active' : ''; ?>" data-tab="wallet">
+            <?php echo $icon_wallet; ?>
+            کیف پول
         </button>
     </div>
 
