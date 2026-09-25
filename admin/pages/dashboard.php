@@ -783,6 +783,7 @@ class EzLens_Auth_Admin {
             'enable_api', 'enable_email_verification', 'enable_phone_verification',
             'enable_customer_login', 'enable_lost_password', 'enable_user_panel',
             'enable_admin_login', 'email_logging',
+            'wallet_payment_online_enabled', 'wallet_payment_card_enabled', 'wallet_payment_bank_enabled',
         ];
         foreach (array_keys($defaults) as $key) {
             if (isset($_POST[$key])) {
