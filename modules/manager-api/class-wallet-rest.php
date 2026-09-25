@@ -49,6 +49,16 @@ class EzLens_Manager_Wallet_REST {
 	public static function register_routes() {
 		register_rest_route(
 			self::NS,
+			'/manager/wallet/config',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'config' ),
+				'permission_callback' => array( __CLASS__, 'can_manage' ),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
 			'/manager/wallet/deposits',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
@@ -117,6 +127,28 @@ class EzLens_Manager_Wallet_REST {
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( __CLASS__, 'search_users' ),
 				'permission_callback' => array( __CLASS__, 'can_manage' ),
+			)
+		);
+	}
+
+	public static function config() {
+		$keys = array(
+			'wallet_bank_name','wallet_account_owner','wallet_account_name','wallet_card_number',
+			'wallet_account_number','wallet_iban','wallet_account_note',
+		);
+		$data = array();
+		foreach ( $keys as $key ) {
+			$data[ $key ] = class_exists( 'EzLens_Auth_Settings' ) ? (string) EzLens_Auth_Settings::get( $key ) : '';
+		}
+		return rest_ensure_response(
+			array(
+				'ok'      => true,
+				'methods' => array(
+					'online' => ! class_exists( 'EzLens_Auth_Settings' ) || '1' === (string) EzLens_Auth_Settings::get( 'wallet_payment_online_enabled' ),
+					'card'   => ! class_exists( 'EzLens_Auth_Settings' ) || '1' === (string) EzLens_Auth_Settings::get( 'wallet_payment_card_enabled' ),
+					'bank'   => ! class_exists( 'EzLens_Auth_Settings' ) || '1' === (string) EzLens_Auth_Settings::get( 'wallet_payment_bank_enabled' ),
+				),
+				'account' => $data,
 			)
 		);
 	}
