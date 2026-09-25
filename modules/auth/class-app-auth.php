@@ -23,13 +23,26 @@ class EzLens_Auth_App_Auth {
     public function determine_current_user($user_id){
         if ((int)$user_id > 0) return $user_id;
         $header = isset($_SERVER['HTTP_AUTHORIZATION']) ? (string) $_SERVER['HTTP_AUTHORIZATION'] : '';
+        if ($header === '' && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $header = (string) $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+        }
         if ($header === '' && function_exists('getallheaders')) {
             $headers = getallheaders();
             $header = isset($headers['Authorization']) ? (string) $headers['Authorization'] : '';
+            if ($header === '' && isset($headers['X-EzLens-Token'])) {
+                $token = trim((string) $headers['X-EzLens-Token']);
+                return $token !== '' ? $this->authenticate($token) : $user_id;
+            }
         }
-        if (!preg_match('/^Bearer\\s+(.+)$/i', trim($header), $m)) return $user_id;
-        $token = trim($m[1]);
-        return $token !== '' ? $this->authenticate($token) : $user_id;
+        if (preg_match('/^Bearer\\s+(.+)$/i', trim($header), $m)) {
+            $token = trim($m[1]);
+            return $token !== '' ? $this->authenticate($token) : $user_id;
+        }
+        if (isset($_SERVER['HTTP_X_EZLENS_TOKEN'])) {
+            $token = trim((string) $_SERVER['HTTP_X_EZLENS_TOKEN']);
+            return $token !== '' ? $this->authenticate($token) : $user_id;
+        }
+        return $user_id;
     }
 
     public function create_table(){
