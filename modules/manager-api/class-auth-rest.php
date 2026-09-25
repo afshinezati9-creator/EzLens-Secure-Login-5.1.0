@@ -153,12 +153,12 @@ class EzLens_Manager_Auth_REST {
 			);
 		}
 
-		$app_pass = self::issue_app_password( $user->ID );
-		if ( is_wp_error( $app_pass ) ) {
-			return $app_pass;
+		$token = self::issue_manager_token( $user->ID, $request );
+		if ( is_wp_error( $token ) ) {
+			return $token;
 		}
 
-		return rest_ensure_response( self::success_payload( $user, $app_pass ) );
+		return rest_ensure_response( self::success_payload( $user, $token ) );
 	}
 
 	/**
@@ -249,12 +249,12 @@ class EzLens_Manager_Auth_REST {
 			);
 		}
 
-		$app_pass = self::issue_app_password( $user->ID );
-		if ( is_wp_error( $app_pass ) ) {
-			return $app_pass;
+		$token = self::issue_manager_token( $user->ID, $request );
+		if ( is_wp_error( $token ) ) {
+			return $token;
 		}
 
-		return rest_ensure_response( self::success_payload( $user, $app_pass ) );
+		return rest_ensure_response( self::success_payload( $user, $token ) );
 	}
 
 	/**
@@ -407,42 +407,18 @@ class EzLens_Manager_Auth_REST {
 	 * @param int $user_id User ID.
 	 * @return string|WP_Error
 	 */
-	private static function issue_app_password( $user_id ) {
-		if ( ! class_exists( 'WP_Application_Passwords' ) ) {
-			return new WP_Error(
-				'ezlens_no_app_pass',
-				'Application Passwords روی وردپرس فعال نیست (نیاز به HTTPS و وردپرس ۵.۶+).',
-				array( 'status' => 500 )
-			);
+	private static function issue_manager_token( $user_id, WP_REST_Request $request ) {
+		if ( ! class_exists( 'EzLens_Auth_App_Auth' ) ) {
+			return new WP_Error( 'ezlens_app_auth', 'سیستم نشست اپ در دسترس نیست', array( 'status' => 500 ) );
 		}
-
-		$existing = WP_Application_Passwords::get_user_application_passwords( $user_id );
-		if ( is_array( $existing ) ) {
-			foreach ( $existing as $row ) {
-				if ( isset( $row['name'], $row['uuid'] ) && $row['name'] === 'EzLens Manager' ) {
-					WP_Application_Passwords::delete_application_password( $user_id, $row['uuid'] );
-				}
-			}
+		$device = sanitize_text_field( (string) $request->get_param( 'device_name' ) );
+		$platform = sanitize_text_field( (string) $request->get_param( 'platform' ) );
+		if ( $device === '' ) {
+			$device = sanitize_text_field( (string) $request->get_header( 'user_agent' ) );
 		}
-
-		$created = WP_Application_Passwords::create_new_application_password(
-			$user_id,
-			array( 'name' => 'EzLens Manager' )
-		);
-
-		if ( is_wp_error( $created ) ) {
-			return new WP_Error(
-				'ezlens_app_pass',
-				$created->get_error_message(),
-				array( 'status' => 500 )
-			);
-		}
-		if ( ! is_array( $created ) || empty( $created[0] ) ) {
-			return new WP_Error( 'ezlens_app_pass', 'ساخت رمز API ناموفق بود', array( 'status' => 500 ) );
-		}
-
-		return (string) $created[0];
+		return EzLens_Auth_App_Auth::get_instance()->issue_token( (int) $user_id, $device, $platform );
 	}
+
 
 	/**
 	 * @param WP_User $user User.
@@ -456,7 +432,8 @@ class EzLens_Manager_Auth_REST {
 			'user_email'           => $user->user_email,
 			'display_name'         => $user->display_name,
 			'user_id'              => (int) $user->ID,
-			'application_password' => $app_pass,
+			'token'                => $app_pass,
+			'expires_in'          => max( 1, min( 365, (int) EzLens_Auth_Settings::get( 'app_token_days' ) ?: 30 ) ) * DAY_IN_SECONDS,
 			'message'              => 'ورود موفقیت‌آمیز',
 		);
 	}
