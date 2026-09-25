@@ -97,6 +97,7 @@ class EzLens_Customer_Dashboard_Install {
 			$dir . 'includes/class-gift-cards.php',
 			$dir . 'includes/class-wallet.php',
 			$dir . 'includes/class-wallet-deposits.php',
+			$dir . 'includes/class-wallet-settings.php',
 			$dir . 'includes/class-wallet-online-pay.php',
 			$dir . 'includes/class-charity.php',
 			$dir . 'includes/class-prescriptions.php',
