@@ -25,6 +25,12 @@ class EzLens_CD_Loader {
 		if ( ! class_exists( 'WooCommerce' ) ) {
 			return;
 		}
+
+		// Wallet configuration belongs to this plugin and is the single source of truth.
+		$wallet_settings = dirname( __FILE__ ) . '/includes/class-wallet-settings.php';
+		if ( is_readable( $wallet_settings ) ) {
+			require_once $wallet_settings;
+		}
 		EzLens_CD_Router::get_instance();
 		EzLens_CD_Assets::get_instance();
 		EzLens_CD_Compatibility::get_instance();
