@@ -46,6 +46,18 @@ class EzLens_CD_Wallet_Deposits {
 			'bank'   => 'اینترنت‌بانک',
 			'online' => 'درگاه پرداخت',
 		);
+		if ( class_exists( 'EzLens_Auth_Settings' ) ) {
+			$flags = array(
+				'online' => 'wallet_payment_online_enabled',
+				'card'   => 'wallet_payment_card_enabled',
+				'bank'   => 'wallet_payment_bank_enabled',
+			);
+			foreach ( $flags as $method => $key ) {
+				if ( '1' !== (string) EzLens_Auth_Settings::get( $key ) ) {
+					unset( $m[ $method ] );
+				}
+			}
+		}
 		return apply_filters( 'ezcd_wallet_deposit_methods', $m );
 	}
 
