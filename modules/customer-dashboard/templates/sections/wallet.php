@@ -5,7 +5,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 $balance  = class_exists( 'EzLens_CD_Wallet' ) ? EzLens_CD_Wallet::balance() : 0;
 $history  = class_exists( 'EzLens_CD_Wallet' ) ? EzLens_CD_Wallet::history() : array();
 $deposits = class_exists( 'EzLens_CD_Wallet_Deposits' ) ? EzLens_CD_Wallet_Deposits::for_user() : array();
-$bank     = get_option( 'ezlens_cd_wallet_bank_info', '' );
+$wallet_settings = class_exists( 'EzLens_Auth_Settings' ) ? EzLens_Auth_Settings::get_all() : array();
+$wallet_methods  = class_exists( 'EzLens_CD_Wallet_Deposits' ) ? EzLens_CD_Wallet_Deposits::methods() : array();
+$bank = '';
+if ( ! empty( $wallet_settings['wallet_bank_name'] ) || ! empty( $wallet_settings['wallet_card_number'] ) || ! empty( $wallet_settings['wallet_account_number'] ) || ! empty( $wallet_settings['wallet_iban'] ) ) {
+	$bank .= '<div class="ezcd-bank-grid">';
+	if ( ! empty( $wallet_settings['wallet_bank_name'] ) ) $bank .= '<div><span>بانک</span><strong>' . esc_html( $wallet_settings['wallet_bank_name'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['wallet_account_owner'] ) ) $bank .= '<div><span>صاحب حساب</span><strong>' . esc_html( $wallet_settings['wallet_account_owner'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['wallet_account_name'] ) ) $bank .= '<div><span>عنوان حساب</span><strong>' . esc_html( $wallet_settings['wallet_account_name'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['wallet_card_number'] ) ) $bank .= '<div><span>شماره کارت</span><strong dir="ltr">' . esc_html( $wallet_settings['wallet_card_number'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['wallet_account_number'] ) ) $bank .= '<div><span>شماره حساب</span><strong dir="ltr">' . esc_html( $wallet_settings['wallet_account_number'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['wallet_iban'] ) ) $bank .= '<div><span>شماره شبا</span><strong dir="ltr">' . esc_html( $wallet_settings['wallet_iban'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['wallet_account_note'] ) ) $bank .= '<p>' . esc_html( $wallet_settings['wallet_account_note'] ) . '</p>';
+	$bank .= '</div>';
+}
 $fa_bal   = function_exists( 'ezcd_fa' ) ? ezcd_fa( number_format_i18n( (int) $balance ) ) : number_format_i18n( (int) $balance );
 
 // Query flags after gateway return
@@ -50,23 +63,15 @@ $topup_amt  = isset( $_GET['amt'] ) ? absint( $_GET['amt'] ) : 0;
 
 			<p class="ezcd-method-label">روش پرداخت را انتخاب کنید</p>
 			<div class="ezcd-method-grid" role="radiogroup" aria-label="روش پرداخت">
-				<button type="button" class="ezcd-method-card is-active" data-method="online" aria-pressed="true">
-					<span class="ezcd-method-ico"><?php echo function_exists( 'ezcd_icon' ) ? ezcd_icon( 'credit-card' ) : ''; ?></span>
-					<strong>درگاه پرداخت</strong>
-					<small>پرداخت آنلاین — شارژ خودکار بعد از موفقیت</small>
+				<?php $first_method = ''; foreach ( array( 'online' => array( 'credit-card', 'درگاه پرداخت', 'پرداخت آنلاین — شارژ خودکار بعد از موفقیت' ), 'bank' => array( 'globe', 'اینترنت‌بانک', 'اسکرین یا شناسه پرداخت بفرستید' ), 'card' => array( 'receipt', 'کارت به کارت / فیش', 'فیش واریز را آپلود کنید' ) as $method_key => $meta ) : if ( ! isset( $wallet_methods[ $method_key ] ) ) continue; if ( '' === $first_method ) $first_method = $method_key; ?>
+				<button type="button" class="ezcd-method-card<?php echo $first_method === $method_key ? ' is-active' : ''; ?>" data-method="<?php echo esc_attr( $method_key ); ?>" aria-pressed="<?php echo $first_method === $method_key ? 'true' : 'false'; ?>">
+					<span class="ezcd-method-ico"><?php echo function_exists( 'ezcd_icon' ) ? ezcd_icon( $meta[0] ) : ''; ?></span>
+					<strong><?php echo esc_html( $meta[1] ); ?></strong>
+					<small><?php echo esc_html( $meta[2] ); ?></small>
 				</button>
-				<button type="button" class="ezcd-method-card" data-method="bank" aria-pressed="false">
-					<span class="ezcd-method-ico"><?php echo function_exists( 'ezcd_icon' ) ? ezcd_icon( 'globe' ) : ''; ?></span>
-					<strong>اینترنت‌بانک</strong>
-					<small>اسکرین یا شناسه پرداخت بفرستید</small>
-				</button>
-				<button type="button" class="ezcd-method-card" data-method="card" aria-pressed="false">
-					<span class="ezcd-method-ico"><?php echo function_exists( 'ezcd_icon' ) ? ezcd_icon( 'receipt' ) : ''; ?></span>
-					<strong>کارت به کارت / فیش</strong>
-					<small>فیش واریز را آپلود کنید</small>
-				</button>
+				<?php endforeach; ?>
 			</div>
-			<input type="hidden" name="method" id="ezcd-dep-method" value="online">
+			<?php if ( ! empty( $first_method ) ) : ?><input type="hidden" name="method" id="ezcd-dep-method" value="<?php echo esc_attr( $first_method ); ?>"><?php else : ?><div class="ezcd-alert ezcd-alert-err">در حال حاضر هیچ روش شارژی برای کیف پول فعال نشده است.</div><?php endif; ?>
 
 			<!-- Online panel -->
 			<div class="ezcd-dep-panel is-open" data-dep-panel="online" id="ezcd-dep-panel-online">
