@@ -56,6 +56,15 @@ class EzLens_Manager_Wallet_REST {
 				'permission_callback' => array( __CLASS__, 'can_manage' ),
 			)
 		);
+		register_rest_route(
+			self::NS,
+			'/manager/wallet/config',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( __CLASS__, 'save_config' ),
+				'permission_callback' => array( __CLASS__, 'can_manage' ),
+			)
+		);
 
 		register_rest_route(
 			self::NS,
@@ -129,6 +138,35 @@ class EzLens_Manager_Wallet_REST {
 				'permission_callback' => array( __CLASS__, 'can_manage' ),
 			)
 		);
+	}
+
+	public static function save_config( WP_REST_Request $request ) {
+		if ( ! class_exists( 'EzLens_Auth_Settings' ) ) {
+			return new WP_Error( 'settings', 'ماژول تنظیمات در دسترس نیست', array( 'status' => 500 ) );
+		}
+		$checkboxes = array(
+			'wallet_payment_online_enabled',
+			'wallet_payment_card_enabled',
+			'wallet_payment_bank_enabled',
+		);
+		foreach ( $checkboxes as $key ) {
+			EzLens_Auth_Settings::set( $key, $request->get_param( $key ) ? '1' : '0' );
+		}
+		$text_keys = array(
+			'wallet_bank_name','wallet_account_owner','wallet_account_name',
+			'wallet_card_number','wallet_account_number','wallet_iban','wallet_account_note',
+		);
+		foreach ( $text_keys as $key ) {
+			$value = $request->get_param( $key );
+			if ( 'wallet_account_note' === $key ) {
+				$value = sanitize_textarea_field( (string) $value );
+			} else {
+				$value = sanitize_text_field( (string) $value );
+			}
+			EzLens_Auth_Settings::set( $key, $value );
+		}
+		EzLens_Auth_Settings::clear_cache();
+		return self::config();
 	}
 
 	public static function config() {
