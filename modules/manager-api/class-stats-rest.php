@@ -352,9 +352,11 @@ class EzLens_Manager_Stats_REST {
 		if ( 'sales' === $by ) {
 			$rows = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT p.ID, p.post_title, CAST(pm.meta_value AS UNSIGNED) AS score
+					"SELECT p.ID, p.post_title, CAST(pm.meta_value AS UNSIGNED) AS score,
+					       thumb.meta_value AS thumbnail_id
 					 FROM {$wpdb->posts} p
 					 INNER JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key = 'total_sales'
+					 LEFT JOIN {$wpdb->postmeta} thumb ON thumb.post_id = p.ID AND thumb.meta_key = '_thumbnail_id'
 					 WHERE p.post_type = 'product' AND p.post_status = 'publish'
 					 ORDER BY score DESC
 					 LIMIT %d",
@@ -364,9 +366,11 @@ class EzLens_Manager_Stats_REST {
 		} else {
 			$rows = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT p.ID, p.post_title, CAST(pm.meta_value AS UNSIGNED) AS score
+					"SELECT p.ID, p.post_title, CAST(pm.meta_value AS UNSIGNED) AS score,
+					       thumb.meta_value AS thumbnail_id
 					 FROM {$wpdb->posts} p
 					 INNER JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key = 'post_views_count'
+					 LEFT JOIN {$wpdb->postmeta} thumb ON thumb.post_id = p.ID AND thumb.meta_key = '_thumbnail_id'
 					 WHERE p.post_type = 'product' AND p.post_status = 'publish'
 					 ORDER BY score DESC
 					 LIMIT %d",
@@ -376,13 +380,49 @@ class EzLens_Manager_Stats_REST {
 		}
 
 		foreach ( (array) $rows as $r ) {
-			$thumb = get_the_post_thumbnail_url( (int) $r->ID, 'thumbnail' );
+			// Resolve thumbnail IDs in one batched metadata query instead of
+			// calling get_the_post_thumbnail_url() once per product.
 			$items[] = array(
-				'id'    => (int) $r->ID,
-				'title' => (string) $r->post_title,
-				'score' => (int) $r->score,
-				'image' => $thumb ? (string) $thumb : '',
+				'id'           => (int) $r->ID,
+				'title'        => (string) $r->post_title,
+				'score'        => (int) $r->score,
+				'thumbnail_id' => (int) ( $r->thumbnail_id ?? 0 ),
 			);
+		}
+
+		$thumbnail_ids = array_values(
+			array_filter(
+				array_map(
+					static function ( $item ) {
+						return (int) ( $item['thumbnail_id'] ?? 0 );
+					},
+					$items
+				)
+			)
+		);
+
+		if ( ! empty( $thumbnail_ids ) ) {
+			$urls = array();
+			foreach ( $thumbnail_ids as $thumbnail_id ) {
+				$url = wp_get_attachment_image_url( $thumbnail_id, 'thumbnail' );
+				if ( $url ) {
+					$urls[ $thumbnail_id ] = (string) $url;
+				}
+			}
+			foreach ( $items as &$item ) {
+				$thumbnail_id = (int) ( $item['thumbnail_id'] ?? 0 );
+				$item['image'] = $thumbnail_id && isset( $urls[ $thumbnail_id ] )
+					? $urls[ $thumbnail_id ]
+					: '';
+				unset( $item['thumbnail_id'] );
+			}
+			unset( $item );
+		} else {
+			foreach ( $items as &$item ) {
+				$item['image'] = '';
+				unset( $item['thumbnail_id'] );
+			}
+			unset( $item );
 		}
 
 		$payload = array(
