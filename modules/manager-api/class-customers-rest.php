@@ -89,7 +89,24 @@ class EzLens_Manager_Customers_REST {
 		return absint( $v );
 	}
 
-	private static function map_user( $user, $include_stats = true ) {
+	private static function map_user( $user, $include_stats = true, $summary = false ) {
+		// Dashboard summary responses only need identity + last-login data.
+		// Avoid building the full customer payload for this read-heavy path.
+		if ( $summary ) {
+			$user_id = (int) $user->ID;
+			return array(
+				'id'           => $user_id,
+				'username'     => $user->user_login,
+				'email'        => $user->user_email,
+				'first_name'   => $user->first_name,
+				'last_name'    => $user->last_name,
+				'display_name' => $user->display_name,
+				'roles'        => array_values( $user->roles ),
+				'registered'   => $user->user_registered,
+				'last_login'   => self::last_login_iso( $user_id ),
+			);
+		}
+
 		$user_id = (int) $user->ID;
 		$has_password = ! empty( $user->user_pass );
 		if ( get_user_meta( $user_id, 'ezlens_otp_only', true ) === '1' ) {
@@ -177,8 +194,13 @@ class EzLens_Manager_Customers_REST {
 		$users = $q->get_results();
 		$total = (int) $q->get_total();
 		$items = array();
+		if ( $summary && ! empty( $users ) ) {
+			// Prime user meta in one batch so last_login_iso() does not cause
+			// one database lookup per user in the dashboard summary.
+			update_meta_cache( 'user', wp_list_pluck( $users, 'ID' ) );
+		}
 		foreach ( (array) $users as $u ) {
-			$items[] = self::map_user( $u, $include_stats );
+			$items[] = self::map_user( $u, $include_stats, $summary );
 		}
 
 		// If role filter empty result but search looks like phone, try meta
