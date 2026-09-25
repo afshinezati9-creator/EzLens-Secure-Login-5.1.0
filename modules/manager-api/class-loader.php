@@ -12,6 +12,7 @@ $files = array(
 	'class-messages-rest.php',
 	'class-campaigns-rest.php',
 	'class-wallet-rest.php',
+	'class-wallet-settings-rest.php',
 	'class-charity-rest.php',
 	'class-discounts-rest.php',
 	'class-mass-rest.php',
