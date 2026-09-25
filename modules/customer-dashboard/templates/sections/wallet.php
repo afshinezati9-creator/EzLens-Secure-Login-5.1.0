@@ -73,6 +73,7 @@ $topup_amt  = isset( $_GET['amt'] ) ? absint( $_GET['amt'] ) : 0;
 			</div>
 			<?php if ( ! empty( $first_method ) ) : ?><input type="hidden" name="method" id="ezcd-dep-method" value="<?php echo esc_attr( $first_method ); ?>"><?php else : ?><div class="ezcd-alert ezcd-alert-err">در حال حاضر هیچ روش شارژی برای کیف پول فعال نشده است.</div><?php endif; ?>
 
+			<?php if ( isset( $wallet_methods['online'] ) ) : ?>
 			<!-- Online panel -->
 			<div class="ezcd-dep-panel is-open" data-dep-panel="online" id="ezcd-dep-panel-online">
 				<div class="ezcd-dep-summary">
@@ -83,6 +84,7 @@ $topup_amt  = isset( $_GET['amt'] ) ? absint( $_GET['amt'] ) : 0;
 				<button type="submit" class="ezcd-btn ezcd-btn-grad" id="ezcd-dep-submit-online">پرداخت از درگاه</button>
 			</div>
 
+			<?php if ( isset( $wallet_methods['bank'] ) ) : ?>
 			<!-- Bank panel -->
 			<div class="ezcd-dep-panel" data-dep-panel="bank" id="ezcd-dep-panel-bank" hidden>
 				<p class="ezcd-hint">بعد از واریز اینترنت‌بانک، شناسه پیگیری یا اسکرین‌شات را بفرستید. پس از تأیید سریع مدیر، مبلغ به کیف پول اضافه می‌شود.</p>
@@ -97,6 +99,7 @@ $topup_amt  = isset( $_GET['amt'] ) ? absint( $_GET['amt'] ) : 0;
 				<button type="submit" class="ezcd-btn ezcd-btn-grad" id="ezcd-dep-submit-bank">ثبت درخواست بررسی</button>
 			</div>
 
+			<?php if ( isset( $wallet_methods['card'] ) ) : ?>
 			<!-- Card panel -->
 			<div class="ezcd-dep-panel" data-dep-panel="card" id="ezcd-dep-panel-card" hidden>
 				<p class="ezcd-hint">کارت‌به‌کارت کنید و فیش را بفرستید. بعد از پیگیری و تأیید، مبلغ به کیف پولتان اضافه می‌شود.</p>
