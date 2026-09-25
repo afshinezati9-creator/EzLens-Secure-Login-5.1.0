@@ -33,6 +33,33 @@ class EzLens_Manager_Customers_REST {
 		);
 		register_rest_route(
 			self::NS,
+			'/manager/customers',
+			array(
+				'methods' => WP_REST_Server::CREATABLE,
+				'callback' => array( __CLASS__, 'create_customer' ),
+				'permission_callback' => array( __CLASS__, 'can_manage' ),
+			)
+		);
+		register_rest_route(
+			self::NS,
+			'/manager/customers/(?P<id>\\d+)',
+			array(
+				'methods' => WP_REST_Server::EDITABLE,
+				'callback' => array( __CLASS__, 'update_customer' ),
+				'permission_callback' => array( __CLASS__, 'can_manage' ),
+			)
+		);
+		register_rest_route(
+			self::NS,
+			'/manager/customers/(?P<id>\\d+)',
+			array(
+				'methods' => WP_REST_Server::DELETABLE,
+				'callback' => array( __CLASS__, 'delete_customer' ),
+				'permission_callback' => array( __CLASS__, 'can_manage' ),
+			)
+		);
+		register_rest_route(
+			self::NS,
 			'/manager/customers/(?P<id>\d+)',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
@@ -238,6 +265,42 @@ class EzLens_Manager_Customers_REST {
 		$response->header( 'X-WP-Total', (string) $total );
 		$response->header( 'X-WP-TotalPages', (string) ( $per_page > 0 ? (int) ceil( $total / $per_page ) : 1 ) );
 		return $response;
+	}
+
+	public static function create_customer( WP_REST_Request $request ) {
+		$p = $request->get_json_params();
+		$phone = preg_replace( '/\\D+/', '', (string) ( $p['phone'] ?? '' ) );
+		if ( strlen( $phone ) === 10 && strpos( $phone, '9' ) === 0 ) $phone = '0' . $phone;
+		$username = sanitize_user( (string) ( $p['username'] ?? $phone ), true );
+		if ( $username === '' ) return new WP_Error( 'invalid_username', 'نام کاربری الزامی است', array( 'status' => 400 ) );
+		$email = sanitize_email( (string) ( $p['email'] ?? '' ) );
+		if ( $email === '' ) $email = $username . '@ezlens.ir';
+		$id = wp_insert_user( array( 'user_login' => $username, 'user_pass' => (string) ( $p['password'] ?? wp_generate_password( 16, true, true ) ), 'user_email' => $email, 'first_name' => sanitize_text_field( (string) ( $p['first_name'] ?? '' ) ), 'last_name' => sanitize_text_field( (string) ( $p['last_name'] ?? '' ) ), 'role' => 'customer' ) );
+		if ( is_wp_error( $id ) ) return $id;
+		if ( $phone !== '' ) { update_user_meta( $id, 'billing_phone', $phone ); update_user_meta( $id, 'user_phone', $phone ); }
+		return new WP_REST_Response( self::map_user( get_userdata( $id ) ), 201 );
+	}
+
+	public static function update_customer( WP_REST_Request $request ) {
+		$id = (int) $request['id']; $user = get_userdata( $id );
+		if ( ! $user ) return new WP_Error( 'not_found', 'کاربر یافت نشد', array( 'status' => 404 ) );
+		$p = $request->get_json_params(); $args = array( 'ID' => $id );
+		if ( array_key_exists( 'email', $p ) ) $args['user_email'] = sanitize_email( (string) $p['email'] );
+		if ( array_key_exists( 'first_name', $p ) ) $args['first_name'] = sanitize_text_field( (string) $p['first_name'] );
+		if ( array_key_exists( 'last_name', $p ) ) $args['last_name'] = sanitize_text_field( (string) $p['last_name'] );
+		if ( ! empty( $p['password'] ) ) $args['user_pass'] = (string) $p['password'];
+		$updated = wp_update_user( $args ); if ( is_wp_error( $updated ) ) return $updated;
+		if ( array_key_exists( 'phone', $p ) ) { $phone = preg_replace( '/\\D+/', '', (string) $p['phone'] ); if ( strlen( $phone ) === 10 && strpos( $phone, '9' ) === 0 ) $phone = '0' . $phone; update_user_meta( $id, 'billing_phone', $phone ); update_user_meta( $id, 'user_phone', $phone ); }
+		return rest_ensure_response( self::map_user( get_userdata( $id ) ) );
+	}
+
+	public static function delete_customer( WP_REST_Request $request ) {
+		$id = (int) $request['id'];
+		if ( ! get_userdata( $id ) ) return new WP_Error( 'not_found', 'کاربر یافت نشد', array( 'status' => 404 ) );
+		if ( $id === get_current_user_id() ) return new WP_Error( 'self_delete', 'حذف کاربر جاری مجاز نیست', array( 'status' => 400 ) );
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+		if ( ! wp_delete_user( $id ) ) return new WP_Error( 'delete_failed', 'حذف کاربر انجام نشد', array( 'status' => 500 ) );
+		return rest_ensure_response( array( 'ok' => true, 'id' => $id ) );
 	}
 
 	public static function get_customer( WP_REST_Request $request ) {
