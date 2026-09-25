@@ -1,0 +1,10 @@
+/* EzLens admin shell — shared tokens */
+:root{
+	--ez-primary:#031f8a;
+	--ez-primary-2:#1e4fd6;
+	--ez-line:#e2e8f0;
+	--ez-muted:#64748b;
+	--ez-radius:14px;
+}
+/* Hide emoji leftovers in menu labels if any slipped in */
+#adminmenu .wp-submenu a{font-variant-emoji:none}

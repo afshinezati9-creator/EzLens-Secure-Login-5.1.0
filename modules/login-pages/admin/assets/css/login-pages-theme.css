@@ -1,0 +1,43 @@
+/* تم یکپارچه صفحات ورود — هم‌راستا با داشبورد مشتری */
+.ezp-wrap, .ezlens-lp, .wrap.ezp-admin {
+  --ez-primary: #031f8a;
+  --ez-primary-2: #1e4fd6;
+  font-family: Tahoma, IRANYekan, sans-serif !important;
+}
+.ezp-hero, .ezp-page-header, .ezp-header {
+  background: linear-gradient(135deg, #031f8a 0%, #1e4fd6 55%, #3b82f6 100%) !important;
+  color: #fff !important;
+  border-radius: 16px !important;
+  border: none !important;
+  box-shadow: 0 12px 32px rgba(3, 31, 138, 0.22) !important;
+}
+.ezp-hero h1, .ezp-hero h2, .ezp-page-header h1,
+.ezp-header h1, .ezp-header .ezp-title {
+  color: #fff !important;
+}
+.ezp-stat-card, .ezp-stats .ezp-stat {
+  border-radius: 14px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05) !important;
+}
+.ezp-btn-primary, .ezp-button-primary,
+.ezp-wrap .button-primary {
+  background: linear-gradient(135deg, #1e4fd6, #031f8a) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  color: #fff !important;
+  text-shadow: none !important;
+  box-shadow: 0 6px 16px rgba(3, 31, 138, 0.25) !important;
+}
+.ezp-btn-primary:hover, .ezp-wrap .button-primary:hover {
+  filter: brightness(1.06);
+  color: #fff !important;
+}
+.ezp-table, .ezp-list-table {
+  border-radius: 14px !important;
+  overflow: hidden;
+  border: 1px solid #e2e8f0 !important;
+}
+.ezp-empty-icon { color: #031f8a; }
+/* حذف ظاهر ایموجی/پیش‌فرض زننده */
+.ezp-wrap .dashicons-before:before { opacity: 0.85; }
