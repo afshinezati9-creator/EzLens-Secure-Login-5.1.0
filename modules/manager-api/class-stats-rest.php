@@ -13,6 +13,12 @@ class EzLens_Manager_Stats_REST {
 
 	const NS = 'ezlens/v1';
 
+	// Dashboard stats are read-heavy and can trigger several expensive
+	// WooCommerce/WordPress queries. A short transient keeps repeated dashboard
+	// opens/refreshes from rebuilding the same aggregates every time.
+	const STATS_CACHE_TTL = 20;
+	const TOP_PRODUCTS_CACHE_TTL = 30;
+
 	public static function init() {
 		add_action( 'rest_api_init', array( __CLASS__, 'register_routes' ) );
 	}
@@ -99,6 +105,12 @@ class EzLens_Manager_Stats_REST {
 		if ( ! in_array( $period, array( 'day', 'week', 'month', 'all' ), true ) ) {
 			$period = 'week';
 		}
+		$cache_key = 'ezlens_mgr_stats_' . md5( $period );
+		$cached = get_transient( $cache_key );
+		if ( is_array( $cached ) ) {
+			return rest_ensure_response( $cached );
+		}
+
 		$bounds = self::period_bounds( $period );
 
 		$orders   = self::order_stats( $bounds );
@@ -107,8 +119,7 @@ class EzLens_Manager_Stats_REST {
 		$products = self::product_stats();
 		$views    = self::views_stats();
 
-		return rest_ensure_response(
-			array(
+		$payload = array(
 				'ok'           => true,
 				'period'       => $period,
 				'period_label' => $bounds['label'],
@@ -122,8 +133,10 @@ class EzLens_Manager_Stats_REST {
 					'product_views' => 'بازدید محصول از meta post_views_count است و فعلاً تجمعی (کل دوره) محاسبه می‌شود؛ فروش و سفارش‌ها بر اساس بازه فیلتر می‌شوند.',
 					'ga4'           => 'برای بازدید کل سایت از GA4، Service Account یا اشتراک Site Kit لازم است. Property: 551454196',
 				),
-			)
 		);
+
+		set_transient( $cache_key, $payload, self::STATS_CACHE_TTL );
+		return rest_ensure_response( $payload );
 	}
 
 	private static function order_stats( $bounds ) {
@@ -146,13 +159,12 @@ class EzLens_Manager_Stats_REST {
 			$args['date_created'] = $bounds['start_mysql'] . '...' . $bounds['end_mysql'];
 		}
 
-		$ids = wc_get_orders( $args );
-		$count = count( $ids );
+		$orders = wc_get_orders( array_merge( $args, array( 'return' => 'objects' ) ) );
+		$count = count( $orders );
 		$revenue = 0.0;
 		$by_status = array();
 
-		foreach ( $ids as $oid ) {
-			$order = wc_get_order( $oid );
+		foreach ( $orders as $order ) {
 			if ( ! $order ) {
 				continue;
 			}
@@ -311,6 +323,11 @@ class EzLens_Manager_Stats_REST {
 	public static function top_products( WP_REST_Request $request ) {
 		$by    = sanitize_key( $request->get_param( 'by' ) ?: 'views' ); // views|sales
 		$limit = max( 3, min( 20, (int) ( $request->get_param( 'limit' ) ?: 8 ) ) );
+		$cache_key = 'ezlens_mgr_top_products_' . md5( $by . '|' . $limit );
+		$cached = get_transient( $cache_key );
+		if ( is_array( $cached ) ) {
+			return rest_ensure_response( $cached );
+		}
 
 		global $wpdb;
 		$items = array();
@@ -351,13 +368,13 @@ class EzLens_Manager_Stats_REST {
 			);
 		}
 
-		return rest_ensure_response(
-			array(
-				'ok'    => true,
-				'by'    => $by,
-				'items' => $items,
-			)
+		$payload = array(
+			'ok'    => true,
+			'by'    => $by,
+			'items' => $items,
 		);
+		set_transient( $cache_key, $payload, self::TOP_PRODUCTS_CACHE_TTL );
+		return rest_ensure_response( $payload );
 	}
 }
 
