@@ -48,6 +48,7 @@ class EzLens_Manager_Auth_REST {
 		header( 'Access-Control-Allow-Credentials: true' );
 		header( 'Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS' );
 		header( 'Access-Control-Allow-Headers: Authorization, X-EzLens-Token, Content-Type, X-WP-Nonce, X-Requested-With, Accept, Origin' );
+		header( 'Access-Control-Allow-Private-Network: true' );
 		header( 'Access-Control-Max-Age: 600' );
 		header( 'Access-Control-Expose-Headers: X-WP-Total, X-WP-TotalPages, Link' );
 		header( 'Vary: Origin' );
