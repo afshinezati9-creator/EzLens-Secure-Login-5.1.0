@@ -382,7 +382,10 @@ class EzLens_Manager_Wallet_REST {
 		}
 		$id   = (int) $request['id'];
 		$note = sanitize_textarea_field( $request->get_param( 'admin_note' ) ?: '' );
-		EzLens_CD_Wallet_Deposits::reject( $id, $note );
+		$r = EzLens_CD_Wallet_Deposits::reject( $id, $note );
+		if ( is_wp_error( $r ) ) {
+			return $r;
+		}
 		global $wpdb;
 		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . EzLens_CD_Wallet_Deposits::table() . ' WHERE id = %d', $id ) );
 		return rest_ensure_response(
