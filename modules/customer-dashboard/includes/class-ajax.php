@@ -92,9 +92,31 @@ class EzLens_CD_Ajax {
 		if ( ! empty( $_REQUEST['ptab'] ) ) {
 			$args['ptab'] = sanitize_key( $_REQUEST['ptab'] );
 		}
-		$html  = EzLens_CD_Sections::render( $section, $args );
-		$title = EzLens_CD_Sections::title( $section );
-		$url   = $this->section_url( $section, $args );
+		// Wallet is a critical SPA section: make sure its tables exist before rendering.
+		// This also repairs older installations where the wallet module was added after activation.
+		if ( 'wallet' === $section ) {
+			if ( class_exists( 'EzLens_CD_Wallet' ) ) {
+				EzLens_CD_Wallet::maybe_create_table();
+			}
+			if ( class_exists( 'EzLens_CD_Wallet_Deposits' ) ) {
+				EzLens_CD_Wallet_Deposits::maybe_create_table();
+			}
+		}
+
+		try {
+			$html  = EzLens_CD_Sections::render( $section, $args );
+			$title = EzLens_CD_Sections::title( $section );
+			$url   = $this->section_url( $section, $args );
+		} catch ( Throwable $e ) {
+			error_log( 'EzLens CD wallet/section AJAX error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() );
+			wp_send_json_error(
+				array(
+					'message' => ( defined( 'WP_DEBUG' ) && WP_DEBUG )
+						? 'خطا در بارگذاری بخش: ' . $e->getMessage()
+						: 'خطا در بارگذاری کیف پول. لطفاً صفحه را تازه کنید.',
+				)
+			);
+		}
 		wp_send_json_success(
 			array(
 				'html'    => $html,
