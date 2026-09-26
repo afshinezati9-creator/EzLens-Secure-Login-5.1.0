@@ -181,24 +181,54 @@ class EzLens_CD_Wallet_Deposits {
 			return new WP_Error( 'db', 'جدول درخواست‌های کیف پول در دسترس نیست' );
 		}
 		$id  = absint( $id );
-		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE id = %d', $id ) );
-		if ( ! $row || 'pending' !== $row->status ) {
-			return new WP_Error( 'invalid', 'درخواست معتبر نیست' );
+		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE id = %d AND status = %s', $id, 'pending' ) );
+		if ( ! $row ) {
+			return new WP_Error( 'invalid', 'درخواست معتبر نیست یا قبلاً بررسی شده است' );
 		}
-		$r = EzLens_CD_Wallet::add_entry( (int) $row->user_id, (int) $row->amount, 'credit', 'admin', 'شارژ کیف پول #' . $id );
-		if ( is_wp_error( $r ) ) {
-			return $r;
-		}
-		$wpdb->update(
+
+		// Claim the request first so double-clicks/concurrent requests cannot credit twice.
+		$claimed = $wpdb->update(
 			self::table(),
 			array(
 				'status'     => 'approved',
 				'admin_note' => sanitize_textarea_field( $admin_note ),
 				'updated_at' => current_time( 'mysql' ),
 			),
-			array( 'id' => $id )
+			array( 'id' => $id, 'status' => 'pending' ),
+			array( '%s', '%s', '%s' ),
+			array( '%d', '%s' )
 		);
+		if ( 1 !== (int) $claimed ) {
+			return new WP_Error( 'race', 'این درخواست قبلاً در حال بررسی یا بررسی شده است' );
+		}
+
+		$r = EzLens_CD_Wallet::add_entry(
+			(int) $row->user_id,
+			(int) $row->amount,
+			'credit',
+			'admin',
+			'شارژ کیف پول #' . $id,
+			'wallet_deposit',
+			$id
+		);
+		if ( is_wp_error( $r ) ) {
+			$wpdb->update(
+				self::table(),
+				array(
+					'status'     => 'pending',
+					'admin_note' => sanitize_textarea_field( 'خطا در شارژ: ' . $r->get_error_message() ),
+					'updated_at' => current_time( 'mysql' ),
+				),
+				array( 'id' => $id, 'status' => 'approved' ),
+				array( '%s', '%s', '%s' ),
+				array( '%d', '%s' )
+			);
+			self::recount_pending();
+			return $r;
+		}
+
 		self::recount_pending();
+		do_action( 'ezcd_wallet_deposit_approved', $id, (int) $row->user_id, (int) $row->amount );
 		return true;
 	}
 
@@ -208,23 +238,25 @@ class EzLens_CD_Wallet_Deposits {
 			return new WP_Error( 'db', 'جدول درخواست‌های کیف پول در دسترس نیست' );
 		}
 		$id = absint( $id );
-		$wpdb->update(
+		$updated = $wpdb->update(
 			self::table(),
 			array(
 				'status'     => 'rejected',
 				'admin_note' => sanitize_textarea_field( $admin_note ),
 				'updated_at' => current_time( 'mysql' ),
 			),
-			array( 'id' => $id )
+			array( 'id' => $id, 'status' => 'pending' ),
+			array( '%s', '%s', '%s' ),
+			array( '%d', '%s' )
 		);
+		if ( 1 !== (int) $updated ) {
+			return new WP_Error( 'invalid', 'درخواست معتبر نیست یا قبلاً بررسی شده است' );
+		}
 		self::recount_pending();
+		do_action( 'ezcd_wallet_deposit_rejected', $id );
 		return true;
 	}
 
-	/**
-	 * Mark an online top-up deposit approved by its gateway/order reference.
-	 * This is idempotent and intentionally updates only a matching pending row.
-	 */
 	public static function approve_by_ref( $ref_code, $user_id = 0 ) {
 		global $wpdb;
 		if ( ! self::table_exists() ) {
