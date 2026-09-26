@@ -11,6 +11,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class EzLens_CD_Wallet_Deposits {
 
+	private static function table_exists() {
+		global $wpdb;
+		$table = self::table();
+		$found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+		return $found === $table;
+	}
+
 	public static function table() {
 		global $wpdb;
 		return $wpdb->prefix . 'ezlens_cd_wallet_deposits';
@@ -72,6 +79,9 @@ class EzLens_CD_Wallet_Deposits {
 
 	public static function for_user( $user_id = 0, $limit = 20 ) {
 		global $wpdb;
+		if ( ! self::table_exists() ) {
+			return array();
+		}
 		$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
 		$rows    = $wpdb->get_results(
 			$wpdb->prepare(
@@ -85,6 +95,9 @@ class EzLens_CD_Wallet_Deposits {
 
 	public static function pending( $limit = 50 ) {
 		global $wpdb;
+		if ( ! self::table_exists() ) {
+			return array();
+		}
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				'SELECT * FROM ' . self::table() . ' WHERE status = %s ORDER BY id DESC LIMIT %d',
@@ -100,6 +113,9 @@ class EzLens_CD_Wallet_Deposits {
 	 */
 	public static function create( $data, $user_id = 0 ) {
 		global $wpdb;
+		if ( ! self::table_exists() ) {
+			self::maybe_create_table();
+		}
 		$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
 		$amount  = isset( $data['amount'] ) ? absint( preg_replace( '/\D+/', '', (string) $data['amount'] ) ) : 0;
 		// support Persian digits
@@ -161,6 +177,9 @@ class EzLens_CD_Wallet_Deposits {
 	 */
 	public static function approve( $id, $admin_note = '' ) {
 		global $wpdb;
+		if ( ! self::table_exists() ) {
+			return new WP_Error( 'db', 'جدول درخواست‌های کیف پول در دسترس نیست' );
+		}
 		$id  = absint( $id );
 		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE id = %d', $id ) );
 		if ( ! $row || 'pending' !== $row->status ) {
@@ -185,6 +204,9 @@ class EzLens_CD_Wallet_Deposits {
 
 	public static function reject( $id, $admin_note = '' ) {
 		global $wpdb;
+		if ( ! self::table_exists() ) {
+			return new WP_Error( 'db', 'جدول درخواست‌های کیف پول در دسترس نیست' );
+		}
 		$id = absint( $id );
 		$wpdb->update(
 			self::table(),
@@ -201,6 +223,10 @@ class EzLens_CD_Wallet_Deposits {
 
 	public static function recount_pending() {
 		global $wpdb;
+		if ( ! self::table_exists() ) {
+			update_option( 'ezlens_cd_wallet_pending_count', 0, false );
+			return;
+		}
 		$n = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . self::table() . ' WHERE status = %s', 'pending' ) );
 		update_option( 'ezlens_cd_wallet_pending_count', $n, false );
 	}
