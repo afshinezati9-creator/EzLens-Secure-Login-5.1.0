@@ -455,10 +455,11 @@ class EzLens_CD_Ajax {
 	public function handle_wallet_deposit() {
 		$this->require_login();
 		$this->verify();
-		$method = isset( $_POST['method'] ) ? sanitize_key( $_POST['method'] ) : 'card';
+		$method = isset( $_POST['method'] ) ? sanitize_key( wp_unslash( $_POST['method'] ) ) : 'card';
 		$amount_raw = isset( $_POST['amount'] ) ? wp_unslash( $_POST['amount'] ) : '';
-		$amount = (int) preg_replace( '/\D+/', '', (string) $amount_raw );
-
+		$fa = array( '۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹' );
+		$en = array( '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' );
+		$amount = (int) preg_replace( '/\D+/', '', str_replace( $fa, $en, (string) $amount_raw ) );
 		/* Online gateway — shared helper (ZarinPal / WC gateways) */
 		if ( 'online' === $method ) {
 			if ( function_exists( 'ezcd_create_wallet_topup_order' ) ) {
@@ -478,6 +479,12 @@ class EzLens_CD_Ajax {
 			);
 		}
 
+		if ( class_exists( 'EzLens_CD_Wallet_Deposits' ) ) {
+			$allowed_methods = EzLens_CD_Wallet_Deposits::methods();
+			if ( ! isset( $allowed_methods[ $method ] ) ) {
+				wp_send_json_error( array( 'message' => 'این روش شارژ کیف پول در حال حاضر فعال نیست' ) );
+			}
+		}
 		$receipt_id = 0;
 		$file_key = '';
 		if ( ! empty( $_FILES['receipt']['name'] ) ) {
@@ -486,13 +493,18 @@ class EzLens_CD_Ajax {
 			$file_key = 'receipt_card';
 		}
 		if ( $file_key ) {
+			$max = function_exists( 'ezcd_max_upload_bytes' ) ? ezcd_max_upload_bytes() : ( 20 * 1024 * 1024 );
+			if ( ! empty( $_FILES[ $file_key ]['size'] ) && (int) $_FILES[ $file_key ]['size'] > $max ) {
+				wp_send_json_error( array( 'message' => 'حجم فیش نباید بیشتر از ۲۰ مگابایت باشد' ) );
+			}
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 			require_once ABSPATH . 'wp-admin/includes/media.php';
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 			$aid = media_handle_upload( $file_key, 0 );
-			if ( ! is_wp_error( $aid ) ) {
-				$receipt_id = (int) $aid;
+			if ( is_wp_error( $aid ) ) {
+				wp_send_json_error( array( 'message' => $aid->get_error_message() ) );
 			}
+			$receipt_id = (int) $aid;
 		}
 		$ref = '';
 		if ( ! empty( $_POST['ref_code'] ) ) {
