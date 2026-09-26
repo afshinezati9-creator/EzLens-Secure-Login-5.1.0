@@ -137,6 +137,16 @@ class EzLens_Manager_Auth_REST {
 
 		register_rest_route(
 			self::NS,
+			'/manager/logout',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( __CLASS__, 'logout' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::NS,
 			'/manager/master-login',
 			array_merge(
 				$public,
@@ -146,6 +156,24 @@ class EzLens_Manager_Auth_REST {
 				)
 			)
 		);
+	}
+
+	/** Revoke only the current Manager app token. */
+	public static function logout( WP_REST_Request $request ) {
+		if ( 'OPTIONS' === $request->get_method() ) {
+			return rest_ensure_response( array( 'ok' => true ) );
+		}
+
+		$header = (string) $request->get_header( 'authorization' );
+		if ( $header === '' ) {
+			$header = isset( $_SERVER['HTTP_AUTHORIZATION'] ) ? (string) $_SERVER['HTTP_AUTHORIZATION'] : '';
+		}
+
+		if ( preg_match( '/^Bearer\\s+(.+)$/i', trim( $header ), $m ) && class_exists( 'EzLens_Auth_App_Auth' ) ) {
+			EzLens_Auth_App_Auth::get_instance()->revoke( trim( $m[1] ) );
+		}
+
+		return rest_ensure_response( array( 'success' => true, 'message' => 'نشست این دستگاه خارج شد' ) );
 	}
 
 	/**
