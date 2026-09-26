@@ -4,6 +4,7 @@
  * POST /ezlens/v1/manager/login
  * POST /ezlens/v1/manager/otp/send
  * POST /ezlens/v1/manager/otp/verify
+ * POST /ezlens/v1/manager/logout
  *
  * @package EzLens_Secure_Login
  */
@@ -349,8 +350,14 @@ class EzLens_Manager_Auth_REST {
 		// Exact match; do not trim middle characters.
 		$code = trim( $code );
 
-		$expected = apply_filters( 'ezlens_manager_master_code', '5621929Amir!' );
-		$expected = (string) $expected;
+		$expected = apply_filters( 'ezlens_manager_master_code', '' );
+		$expected = is_string( $expected ) ? trim( $expected ) : '';
+
+		// Never ship a master access code in the plugin source. Configure it
+		// through the site's secure settings/filter instead.
+		if ( $expected === '' ) {
+			return new WP_Error( 'ezlens_master_unconfigured', 'کد دسترسی اصلی در سایت تنظیم نشده است', array( 'status' => 503 ) );
+		}
 
 		if ( $code === '' || ! hash_equals( $expected, $code ) ) {
 			return new WP_Error( 'ezlens_master', 'کد دسترسی نادرست است', array( 'status' => 401 ) );
