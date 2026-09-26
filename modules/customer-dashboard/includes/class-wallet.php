@@ -38,8 +38,18 @@ class EzLens_CD_Wallet {
 		dbDelta( $sql );
 	}
 
+	private static function table_exists() {
+		global $wpdb;
+		$table = self::table();
+		$found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+		return $found === $table;
+	}
+
 	public static function balance( $user_id = 0 ) {
 		global $wpdb;
+		if ( ! self::table_exists() ) {
+			return 0;
+		}
 		$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
 		if ( ! $user_id ) {
 			return 0;
@@ -56,6 +66,9 @@ class EzLens_CD_Wallet {
 	 */
 	public static function history( $user_id = 0, $limit = 30 ) {
 		global $wpdb;
+		if ( ! self::table_exists() ) {
+			return array();
+		}
 		$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
 		$rows    = $wpdb->get_results( $wpdb->prepare(
 			'SELECT * FROM ' . self::table() . ' WHERE user_id = %d ORDER BY id DESC LIMIT %d',
@@ -70,6 +83,9 @@ class EzLens_CD_Wallet {
 	 */
 	public static function add_entry( $user_id, $amount, $type, $reason, $note = '', $ref_type = '', $ref_id = 0 ) {
 		global $wpdb;
+		if ( ! self::table_exists() ) {
+			self::maybe_create_table();
+		}
 		$user_id = absint( $user_id );
 		$amount  = absint( $amount );
 		$type    = ( 'debit' === $type ) ? 'debit' : 'credit';
