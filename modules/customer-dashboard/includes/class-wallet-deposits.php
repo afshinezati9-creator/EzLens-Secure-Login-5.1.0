@@ -221,6 +221,39 @@ class EzLens_CD_Wallet_Deposits {
 		return true;
 	}
 
+	/**
+	 * Mark an online top-up deposit approved by its gateway/order reference.
+	 * This is idempotent and intentionally updates only a matching pending row.
+	 */
+	public static function approve_by_ref( $ref_code, $user_id = 0 ) {
+		global $wpdb;
+		if ( ! self::table_exists() ) {
+			return new WP_Error( 'db', 'جدول درخواست‌های کیف پول در دسترس نیست' );
+		}
+		$ref_code = sanitize_text_field( $ref_code );
+		$user_id  = absint( $user_id );
+		if ( '' === $ref_code ) {
+			return new WP_Error( 'ref', 'مرجع پرداخت نامعتبر است' );
+		}
+		$where = array( 'ref_code' => $ref_code, 'status' => 'pending' );
+		if ( $user_id > 0 ) {
+			$where['user_id'] = $user_id;
+		}
+		$updated = $wpdb->update(
+			self::table(),
+			array(
+				'status'     => 'approved',
+				'admin_note' => 'تأیید خودکار پرداخت آنلاین',
+				'updated_at' => current_time( 'mysql' ),
+			),
+			$where,
+			array( '%s', '%s', '%s' ),
+			array( '%s', '%s', '%d' )
+		);
+		self::recount_pending();
+		return false === $updated ? new WP_Error( 'db', 'به‌روزرسانی درخواست پرداخت ممکن نشد' ) : true;
+	}
+
 	public static function recount_pending() {
 		global $wpdb;
 		if ( ! self::table_exists() ) {
