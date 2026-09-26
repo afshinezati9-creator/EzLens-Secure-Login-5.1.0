@@ -18,13 +18,13 @@ $wallet_methods  = class_exists( 'EzLens_CD_Wallet_Settings' ) ? EzLens_CD_Walle
 $bank = '';
 if ( ! empty( $wallet_settings['bank_name'] ) || ! empty( $wallet_settings['card_number'] ) || ! empty( $wallet_settings['account_number'] ) || ! empty( $wallet_settings['iban'] ) ) {
 	$bank .= '<div class="ezcd-bank-grid">';
-	if ( ! empty( $wallet_settings['wallet_bank_name'] ) ) $bank .= '<div><span>بانک</span><strong>' . esc_html( $wallet_settings['wallet_bank_name'] ) . '</strong></div>';
-	if ( ! empty( $wallet_settings['owner'] ) ) $bank .= '<div><span>صاحب حساب</span><strong>' . esc_html( $wallet_settings['wallet_account_owner'] ) . '</strong></div>';
-	if ( ! empty( $wallet_settings['account_name'] ) ) $bank .= '<div><span>عنوان حساب</span><strong>' . esc_html( $wallet_settings['wallet_account_name'] ) . '</strong></div>';
-	if ( ! empty( $wallet_settings['wallet_card_number'] ) ) $bank .= '<div><span>شماره کارت</span><strong dir="ltr">' . esc_html( $wallet_settings['wallet_card_number'] ) . '</strong></div>';
-	if ( ! empty( $wallet_settings['wallet_account_number'] ) ) $bank .= '<div><span>شماره حساب</span><strong dir="ltr">' . esc_html( $wallet_settings['wallet_account_number'] ) . '</strong></div>';
-	if ( ! empty( $wallet_settings['wallet_iban'] ) ) $bank .= '<div><span>شماره شبا</span><strong dir="ltr">' . esc_html( $wallet_settings['wallet_iban'] ) . '</strong></div>';
-	if ( ! empty( $wallet_settings['note'] ) ) $bank .= '<p>' . esc_html( $wallet_settings['wallet_account_note'] ) . '</p>';
+	if ( ! empty( $wallet_settings['bank_name'] ) ) $bank .= '<div><span>بانک</span><strong>' . esc_html( $wallet_settings['bank_name'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['owner'] ) ) $bank .= '<div><span>صاحب حساب</span><strong>' . esc_html( $wallet_settings['owner'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['account_name'] ) ) $bank .= '<div><span>عنوان حساب</span><strong>' . esc_html( $wallet_settings['account_name'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['card_number'] ) ) $bank .= '<div><span>شماره کارت</span><strong dir="ltr">' . esc_html( $wallet_settings['card_number'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['account_number'] ) ) $bank .= '<div><span>شماره حساب</span><strong dir="ltr">' . esc_html( $wallet_settings['account_number'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['iban'] ) ) $bank .= '<div><span>شماره شبا</span><strong dir="ltr">' . esc_html( $wallet_settings['iban'] ) . '</strong></div>';
+	if ( ! empty( $wallet_settings['note'] ) ) $bank .= '<p>' . esc_html( $wallet_settings['note'] ) . '</p>';
 	$bank .= '</div>';
 }
 $fa_bal   = function_exists( 'ezcd_fa' ) ? ezcd_fa( number_format_i18n( (int) $balance ) ) : number_format_i18n( (int) $balance );
