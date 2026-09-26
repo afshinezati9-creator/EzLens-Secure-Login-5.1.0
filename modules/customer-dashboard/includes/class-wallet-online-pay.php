@@ -129,37 +129,10 @@ function ezcd_create_wallet_topup_order( $user_id, $amount ) {
 }
 
 /**
- * AJAX: online method only (priority 1 — before class-ajax handler).
+ * Online top-up AJAX is handled by EzLens_CD_Ajax::handle_wallet_deposit().
+ * Keeping a single handler prevents duplicate wp_ajax callbacks and ensures
+ * the standard login + nonce checks are always applied.
  */
-add_action( 'wp_ajax_ezcd_wallet_deposit', function () {
-	$method = isset( $_POST['method'] ) ? sanitize_key( wp_unslash( $_POST['method'] ) ) : '';
-	if ( 'online' !== $method ) {
-		return; // let class-ajax handle card/bank
-	}
-
-	if ( ! is_user_logged_in() ) {
-		wp_send_json_error( array( 'message' => 'وارد شوید' ), 403 );
-	}
-
-	$amount_raw = isset( $_POST['amount'] ) ? wp_unslash( $_POST['amount'] ) : '';
-	$fa         = array( '۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹' );
-	$en         = array( '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' );
-	$amount     = (int) preg_replace( '/\D+/', '', str_replace( $fa, $en, (string) $amount_raw ) );
-
-	$result = ezcd_create_wallet_topup_order( get_current_user_id(), $amount );
-	if ( is_wp_error( $result ) ) {
-		wp_send_json_error( array( 'message' => $result->get_error_message() ) );
-	}
-
-	wp_send_json_success(
-		array(
-			'message'  => 'در حال انتقال به درگاه پرداخت…',
-			'redirect' => $result['redirect'],
-			'order_id' => $result['order_id'],
-		)
-	);
-}, 1 );
-
 /**
  * Credit wallet after successful payment (idempotent).
  *
