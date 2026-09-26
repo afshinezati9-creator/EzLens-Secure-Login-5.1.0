@@ -22,6 +22,7 @@ class EzLens_Manager_Auth_REST {
 		add_action( 'rest_api_init', array( __CLASS__, 'register_routes' ) );
 		add_action( 'rest_api_init', array( __CLASS__, 'add_cors_headers' ), 5 );
 		add_filter( 'rest_pre_serve_request', array( __CLASS__, 'send_cors_headers' ), 11 );
+		add_filter( 'rest_pre_dispatch', array( __CLASS__, 'handle_options_preflight' ), 1, 3 );
 	}
 
 	public static function early_cors_headers() {
@@ -53,6 +54,13 @@ class EzLens_Manager_Auth_REST {
 		header( 'Access-Control-Max-Age: 600' );
 		header( 'Access-Control-Expose-Headers: X-WP-Total, X-WP-TotalPages, Link' );
 		header( 'Vary: Origin' );
+	}
+
+	public static function handle_options_preflight( $result, $server, $request ) {
+		if ( 'OPTIONS' !== strtoupper( $request->get_method() ) ) {
+			return $result;
+		}
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
 	}
 
 	public static function add_cors_headers() {
@@ -89,6 +97,7 @@ class EzLens_Manager_Auth_REST {
 
 		header( 'Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS' );
 		header( 'Access-Control-Allow-Headers: Authorization, X-EzLens-Token, Content-Type, X-WP-Nonce, X-Requested-With, Accept, Origin' );
+		header( 'Access-Control-Allow-Private-Network: true' );
 		header( 'Access-Control-Max-Age: 600' );
 		header( 'Access-Control-Expose-Headers: X-WP-Total, X-WP-TotalPages, Link' );
 		header( 'Vary: Origin' );
